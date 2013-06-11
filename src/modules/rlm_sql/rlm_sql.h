@@ -132,6 +132,7 @@ struct sql_inst {
 	sql_rcode_t (*sql_query)(rlm_sql_handle_t **handle, rlm_sql_t *inst, char const *query);
 	sql_rcode_t (*sql_select_query)(rlm_sql_handle_t **handle, rlm_sql_t *inst, char const *query);
 	sql_rcode_t (*sql_fetch_row)(rlm_sql_handle_t **handle, rlm_sql_t *inst);
+	int (*sql_getvpdata)(rlm_sql_t *inst, rlm_sql_handle_t **handle, TALLOC_CTX *ctx, VALUE_PAIR **pair, char const *query);
 };
 
 typedef struct sql_grouplist {

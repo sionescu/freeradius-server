@@ -801,6 +801,7 @@ static int mod_instantiate(CONF_SECTION *conf, void *instance)
 	inst->sql_query			= rlm_sql_query;
 	inst->sql_select_query		= rlm_sql_select_query;
 	inst->sql_fetch_row		= rlm_sql_fetch_row;
+        inst->sql_getvpdata		= sql_getvpdata;
 
 	/*
 	 *	Register the SQL xlat function
