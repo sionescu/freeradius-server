@@ -89,6 +89,8 @@ typedef struct rlm_sqlippool_t {
 	char *log_failed;	/* Failed to allocate ip from the pool */
 	char *log_nopool;	/* There was no Framed-IP-Address but also no Pool-Name */
 
+	char *option_find;	/* Return DHCP options */
+
 				/* Reserved to handle 255.255.255.254 Requests */
 	char *defaultpool;	/* Default Pool-Name if there is none in the check items */
 
@@ -100,6 +102,7 @@ static CONF_PARSER message_config[] = {
 	{ "clear", PW_TYPE_STRING_PTR, offsetof(rlm_sqlippool_t, log_clear), NULL, NULL },
 	{ "failed", PW_TYPE_STRING_PTR, offsetof(rlm_sqlippool_t, log_failed), NULL, NULL },
 	{ "nopool", PW_TYPE_STRING_PTR, offsetof(rlm_sqlippool_t, log_nopool), NULL, NULL },
+        { "option_find", PW_TYPE_STRING_PTR, offsetof(rlm_sqlippool_t, option_find), NULL, NULL },
 
 	{ NULL, -1, 0, NULL, NULL }
 };
@@ -484,6 +487,7 @@ static rlm_rcode_t mod_post_auth(void *instance, REQUEST *request)
 	int allocation_len;
 	uint32_t ip_allocation;
 	VALUE_PAIR *vp;
+	VALUE_PAIR *reply_tmp = NULL;
 	rlm_sql_handle_t *handle;
 	fr_ipaddr_t ipaddr;
 
@@ -597,6 +601,21 @@ static rlm_rcode_t mod_post_auth(void *instance, REQUEST *request)
 	vp->vp_ipaddr = ip_allocation;
 
 	DO(allocate_commit);
+
+        if (inst->option_find && *inst->option_find) {
+            if (!radius_xlat(allocation, sizeof(allocation), request, inst->option_find, NULL, NULL)) {
+                radlog_request(L_ERR, 0, request, "Error generating query; rejecting user");
+                inst->sql_inst->sql_release_socket(inst->sql_inst, handle);
+                return RLM_MODULE_FAIL;
+            }
+            if (inst->sql_inst->sql_getvpdata(inst->sql_inst, &handle, &request->reply, &reply_tmp, allocation) < 0) {
+                radlog_request(L_ERR, 0, request, "SQL query error; rejecting user");
+                inst->sql_inst->sql_release_socket(inst->sql_inst, handle);
+                pairfree(&reply_tmp);
+                return RLM_MODULE_FAIL;
+            }
+            radius_xlat_move(request, &request->reply->vps, &reply_tmp);
+        }
 
 	inst->sql_inst->sql_release_socket(inst->sql_inst, handle);
 
